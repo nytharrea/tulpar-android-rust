@@ -4,12 +4,13 @@ plugins {
 
 android {
     namespace = "tr.tulpar.kalkan"
-    compileSdk = 35
+    compileSdk = 36
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "tr.tulpar.kalkan"
         minSdk = 29 // Android 10+ (RoleManager & CallScreeningService tam uyumu)
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 100
         versionName = "1.0.0-tulpar"
 
@@ -29,8 +30,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     sourceSets {
@@ -41,7 +42,7 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.webkit:webkit:1.11.0")
+    implementation("androidx.core:core-ktx:1.19.1")
+    implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("androidx.webkit:webkit:1.17.1")
 }

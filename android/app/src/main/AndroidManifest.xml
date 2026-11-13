@@ -26,7 +26,7 @@
         android:label="Tulpar"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
-        tools:targetApi="35">
+        tools:targetApi="36">
 
         <!-- Ana Arayüz ve ROLE_SMS (Varsayılan SMS Uygulaması) Gereksinimi: SMS/MMS Gönderim Intent'leri -->
         <activity

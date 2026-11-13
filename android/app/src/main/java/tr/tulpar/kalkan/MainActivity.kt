@@ -11,12 +11,17 @@ import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+
+    private val roleRequestLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { _ -> }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,7 +88,7 @@ class MainActivity : AppCompatActivity() {
                 val roleManager = getSystemService(RoleManager::class.java)
                 if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_SMS)) {
                     val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
-                    startActivityForResult(intent, 102)
+                    roleRequestLauncher.launch(intent)
                 }
             }
         }
@@ -94,7 +99,7 @@ class MainActivity : AppCompatActivity() {
                 val roleManager = getSystemService(RoleManager::class.java)
                 if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING)) {
                     val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
-                    startActivityForResult(intent, 103)
+                    roleRequestLauncher.launch(intent)
                 }
             }
         }

@@ -6,16 +6,16 @@
 //! - İzinli (Beyaz) Liste Koruması (Banka, kargo, `doğrulama kodu`, `tek kullanımlık`, `şifreniz`, alt alan adı koruması)
 //! - Arama Engelleme Motoru (`CallScreeningService`: Gizli numaralar, yabancı ülke kodları, 0850/0212 pazarlama önekleri)
 
+use jni::errors::ThrowRuntimeExAndDefault;
 use jni::objects::{JClass, JString};
-use jni::sys::jstring;
-use jni::JNIEnv;
-use once_cell::sync::Lazy;
+use jni::sys::jboolean;
+use jni::EnvUnowned;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{LazyLock, RwLock};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OperatingMode {
@@ -222,7 +222,7 @@ pub struct EngineState {
     pub usom_domains: HashSet<String>,
 }
 
-static STATE: Lazy<RwLock<EngineState>> = Lazy::new(|| {
+static STATE: LazyLock<RwLock<EngineState>> = LazyLock::new(|| {
     let mut default_domains = HashSet::new();
     for d in [
         "superwin724.com",
@@ -245,7 +245,7 @@ static STATE: Lazy<RwLock<EngineState>> = Lazy::new(|| {
     })
 });
 
-static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
+static URL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\b((?:https?://)?(?:www\.)?([a-z0-9-\.]+\.[a-z]{2,10})(?:/[^\s]*)?)\b").unwrap()
 });
 
@@ -546,10 +546,20 @@ pub fn sync_usom_feed() -> Result<usize, String> {
         "https://usom.subgatenetwork.com/domain.txt",
     ];
 
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(std::time::Duration::from_secs(12)))
+        .build()
+        .into();
+
     let mut fetched_domains = HashSet::new();
     for url in feed_urls {
-        if let Ok(resp) = ureq::get(url).timeout(std::time::Duration::from_secs(12)).call() {
-            if let Ok(body) = resp.into_string() {
+        if let Ok(mut resp) = agent.get(url).call() {
+            if let Ok(body) = resp
+                .body_mut()
+                .with_config()
+                .limit(20_000_000)
+                .read_to_string()
+            {
                 for line in body.lines() {
                     let clean = line.trim().trim_start_matches("www.").to_lowercase();
                     if !clean.is_empty() && !clean.starts_with('#') && clean.contains('.') {
@@ -565,12 +575,12 @@ pub fn sync_usom_feed() -> Result<usize, String> {
 
     // 2. Resmi Siber Güvenlik Başkanlığı REST API (https://siberguvenlik.gov.tr/api/address/index?page=1)
     if fetched_domains.is_empty() {
-        if let Ok(resp) = ureq::get("https://siberguvenlik.gov.tr/api/address/index?page=1")
-            .set("Accept", "application/json")
-            .timeout(std::time::Duration::from_secs(12))
+        if let Ok(mut resp) = agent
+            .get("https://siberguvenlik.gov.tr/api/address/index?page=1")
+            .header("Accept", "application/json")
             .call()
         {
-            if let Ok(json_val) = resp.into_json::<serde_json::Value>() {
+            if let Ok(json_val) = resp.body_mut().read_json::<serde_json::Value>() {
                 if let Some(models) = json_val.get("models").and_then(|m| m.as_array()) {
                     for item in models {
                         if let Some(url_str) = item.get("url").and_then(|u| u.as_str()) {
@@ -605,128 +615,144 @@ fn save_state_locked(state: &EngineState) {
 }
 
 // ============================================================================
-// ANDROID JNI KÖPRÜSÜ (Kotlin <-> Full Rust Native Interface)
+// ANDROID JNI KÖPRÜSÜ (Kotlin <-> Full Rust Native Interface — jni 0.22.4)
 // ============================================================================
 
 #[no_mangle]
-pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_initEngine<'local>(
-    mut env: JNIEnv<'local>,
-    _class: JClass<'local>,
-    storage_path: JString<'local>,
-) -> jstring {
-    let path_str: String = env
-        .get_string(&storage_path)
-        .map(|s| s.into())
-        .unwrap_or_else(|_| "/data/local/tmp".to_string());
+pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_initEngine<'caller>(
+    mut unowned_env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+    storage_path: JString<'caller>,
+) -> JString<'caller> {
+    let outcome = unowned_env.with_env(|env| -> Result<JString<'caller>, jni::errors::Error> {
+        let path_str = storage_path.to_string();
+        let clean_path = if path_str.is_empty() {
+            "/data/local/tmp".to_string()
+        } else {
+            path_str
+        };
 
-    let path_buf = PathBuf::from(&path_str);
-    let _ = fs::create_dir_all(&path_buf);
-    let cfg_file = path_buf.join("tulpar_config.json");
+        let path_buf = PathBuf::from(&clean_path);
+        let _ = fs::create_dir_all(&path_buf);
+        let cfg_file = path_buf.join("tulpar_config.json");
 
-    let mut state = STATE.write().unwrap();
-    state.storage_dir = Some(path_buf);
-
-    if cfg_file.exists() {
-        if let Ok(content) = fs::read_to_string(&cfg_file) {
-            if let Ok(loaded_cfg) = serde_json::from_str::<TulparConfig>(&content) {
-                state.config = loaded_cfg;
-            }
-        }
-    } else {
-        save_state_locked(&state);
-    }
-
-    let json = serde_json::to_string(&state.config).unwrap_or_else(|_| "{}".into());
-    env.new_string(json).unwrap().into_raw()
-}
-
-#[no_mangle]
-pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_getStateJson<'local>(
-    env: JNIEnv<'local>,
-    _class: JClass<'local>,
-) -> jstring {
-    let state = STATE.read().unwrap();
-    let json = serde_json::to_string(&state.config).unwrap_or_else(|_| "{}".into());
-    env.new_string(json).unwrap().into_raw()
-}
-
-#[no_mangle]
-pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_updateConfigJson<'local>(
-    mut env: JNIEnv<'local>,
-    _class: JClass<'local>,
-    new_config_json: JString<'local>,
-) -> jstring {
-    let cfg_str: String = env
-        .get_string(&new_config_json)
-        .map(|s| s.into())
-        .unwrap_or_default();
-
-    let mut state = STATE.write().unwrap();
-    if let Ok(parsed) = serde_json::from_str::<TulparConfig>(&cfg_str) {
-        state.config = parsed;
-        save_state_locked(&state);
-    }
-    let json = serde_json::to_string(&state.config).unwrap_or_else(|_| "{}".into());
-    env.new_string(json).unwrap().into_raw()
-}
-
-#[no_mangle]
-pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_inspectSmsJson<'local>(
-    mut env: JNIEnv<'local>,
-    _class: JClass<'local>,
-    sender: JString<'local>,
-    body: JString<'local>,
-    record_message: jni::sys::jboolean,
-) -> jstring {
-    let sender_str: String = env.get_string(&sender).map(|s| s.into()).unwrap_or_default();
-    let body_str: String = env.get_string(&body).map(|s| s.into()).unwrap_or_default();
-
-    let verdict = evaluate_sms(&sender_str, &body_str);
-
-    if record_message != 0 {
         let mut state = STATE.write().unwrap();
-        let next_id = (state.config.messages.len() as u64) + 1;
-        let now_str = chrono::Local::now().format("%H:%M").to_string();
-        state.config.messages.insert(
-            0,
-            StoredSmsMessage {
-                id: next_id,
-                sender: sender_str,
-                body: body_str,
-                timestamp: now_str,
-                is_spam: verdict.is_spam,
-                matched_reason: verdict.matched_rule.clone(),
-            },
-        );
-        save_state_locked(&state);
-    }
+        state.storage_dir = Some(path_buf);
 
-    let json = serde_json::to_string(&verdict).unwrap_or_else(|_| "{}".into());
-    env.new_string(json).unwrap().into_raw()
+        if cfg_file.exists() {
+            if let Ok(content) = fs::read_to_string(&cfg_file) {
+                if let Ok(loaded_cfg) = serde_json::from_str::<TulparConfig>(&content) {
+                    state.config = loaded_cfg;
+                }
+            }
+        } else {
+            save_state_locked(&state);
+        }
+
+        let json = serde_json::to_string(&state.config).unwrap_or_else(|_| "{}".into());
+        JString::from_str(env, json)
+    });
+    outcome.resolve::<ThrowRuntimeExAndDefault>()
 }
 
 #[no_mangle]
-pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_inspectCallJson<'local>(
-    mut env: JNIEnv<'local>,
-    _class: JClass<'local>,
-    phone_number: JString<'local>,
-    is_in_contacts: jni::sys::jboolean,
-) -> jstring {
-    let num_str: String = env.get_string(&phone_number).map(|s| s.into()).unwrap_or_default();
-    let verdict = evaluate_call(&num_str, is_in_contacts != 0);
-    let json = serde_json::to_string(&verdict).unwrap_or_else(|_| "{}".into());
-    env.new_string(json).unwrap().into_raw()
+pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_getStateJson<'caller>(
+    mut unowned_env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+) -> JString<'caller> {
+    let outcome = unowned_env.with_env(|env| -> Result<JString<'caller>, jni::errors::Error> {
+        let state = STATE.read().unwrap();
+        let json = serde_json::to_string(&state.config).unwrap_or_else(|_| "{}".into());
+        JString::from_str(env, json)
+    });
+    outcome.resolve::<ThrowRuntimeExAndDefault>()
 }
 
 #[no_mangle]
-pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_syncUsomNow<'local>(
-    env: JNIEnv<'local>,
-    _class: JClass<'local>,
-) -> jstring {
-    let _ = sync_usom_feed();
-    let state = STATE.read().unwrap();
-    let json = serde_json::to_string(&state.config).unwrap_or_else(|_| "{}".into());
-    env.new_string(json).unwrap().into_raw()
+pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_updateConfigJson<'caller>(
+    mut unowned_env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+    new_config_json: JString<'caller>,
+) -> JString<'caller> {
+    let outcome = unowned_env.with_env(|env| -> Result<JString<'caller>, jni::errors::Error> {
+        let cfg_str = new_config_json.to_string();
+        let mut state = STATE.write().unwrap();
+        if let Ok(parsed) = serde_json::from_str::<TulparConfig>(&cfg_str) {
+            state.config = parsed;
+            save_state_locked(&state);
+        }
+        let json = serde_json::to_string(&state.config).unwrap_or_else(|_| "{}".into());
+        JString::from_str(env, json)
+    });
+    outcome.resolve::<ThrowRuntimeExAndDefault>()
+}
+
+#[no_mangle]
+pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_inspectSmsJson<'caller>(
+    mut unowned_env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+    sender: JString<'caller>,
+    body: JString<'caller>,
+    record_message: jboolean,
+) -> JString<'caller> {
+    let outcome = unowned_env.with_env(|env| -> Result<JString<'caller>, jni::errors::Error> {
+        let sender_str = sender.to_string();
+        let body_str = body.to_string();
+
+        let verdict = evaluate_sms(&sender_str, &body_str);
+
+        if record_message {
+            let mut state = STATE.write().unwrap();
+            let next_id = (state.config.messages.len() as u64) + 1;
+            let now_str = chrono::Local::now().format("%H:%M").to_string();
+            state.config.messages.insert(
+                0,
+                StoredSmsMessage {
+                    id: next_id,
+                    sender: sender_str,
+                    body: body_str,
+                    timestamp: now_str,
+                    is_spam: verdict.is_spam,
+                    matched_reason: verdict.matched_rule.clone(),
+                },
+            );
+            save_state_locked(&state);
+        }
+
+        let json = serde_json::to_string(&verdict).unwrap_or_else(|_| "{}".into());
+        JString::from_str(env, json)
+    });
+    outcome.resolve::<ThrowRuntimeExAndDefault>()
+}
+
+#[no_mangle]
+pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_inspectCallJson<'caller>(
+    mut unowned_env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+    phone_number: JString<'caller>,
+    is_in_contacts: jboolean,
+) -> JString<'caller> {
+    let outcome = unowned_env.with_env(|env| -> Result<JString<'caller>, jni::errors::Error> {
+        let num_str = phone_number.to_string();
+        let verdict = evaluate_call(&num_str, is_in_contacts);
+        let json = serde_json::to_string(&verdict).unwrap_or_else(|_| "{}".into());
+        JString::from_str(env, json)
+    });
+    outcome.resolve::<ThrowRuntimeExAndDefault>()
+}
+
+#[no_mangle]
+pub extern "system" fn Java_tr_tulpar_kalkan_RustBridge_syncUsomNow<'caller>(
+    mut unowned_env: EnvUnowned<'caller>,
+    _class: JClass<'caller>,
+) -> JString<'caller> {
+    let outcome = unowned_env.with_env(|env| -> Result<JString<'caller>, jni::errors::Error> {
+        let _ = sync_usom_feed();
+        let state = STATE.read().unwrap();
+        let json = serde_json::to_string(&state.config).unwrap_or_else(|_| "{}".into());
+        JString::from_str(env, json)
+    });
+    outcome.resolve::<ThrowRuntimeExAndDefault>()
 }
 
 #[cfg(test)]
