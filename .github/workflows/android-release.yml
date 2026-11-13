@@ -57,10 +57,10 @@ jobs:
             -o ../android/app/src/main/jniLibs \
             build --release
 
-      - name: Gradle 8.9 Kurulumu
+      - name: Gradle 9.9.1 Kurulumu
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '9.9.1'
 
       - name: İmzalanmamış Release APK'yı Derle (Gradle)
         working-directory: android
