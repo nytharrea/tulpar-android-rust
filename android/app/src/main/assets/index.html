@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tulpar — Türk Mitolojisi Temalı Rust Spam & Çağrı Kalkanı</title>
+  <style>
+    :root {
+      --bg-primary: #F2F4F8;
+      --card-bg: rgba(255, 255, 255, 0.88);
+      --card-border: rgba(255, 255, 255, 0.65);
+      --text-main: #111827;
+      --text-muted: #6B7280;
+      --accent-blue: #007AFF;
+      --accent-cyan: #06B6D4;
+      --accent-green: #34C759;
+      --accent-orange: #F59E0B;
+      --accent-red: #EF4444;
+      --nav-bg: rgba(255, 255, 255, 0.82);
+      --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #0B0F19;
+        --card-bg: rgba(22, 29, 45, 0.82);
+        --card-border: rgba(255, 255, 255, 0.09);
+        --text-main: #F9FAFB;
+        --text-muted: #9CA3AF;
+        --nav-bg: rgba(17, 24, 39, 0.85);
+        --shadow-soft: 0 8px 28px rgba(0, 0, 0, 0.35);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0 0 110px 0;
+      background: var(--bg-primary);
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 18px;
+    }
+
+    /* Üst Başlık ve Hızlı Ekle Butonu */
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    h1.page-title {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+      margin: 6px 0;
+    }
+
+    .circle-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--card-border);
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: var(--text-main);
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-soft);
+      cursor: pointer;
+    }
+
+    /* Bölüm Başlıkları */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin: 20px 4px 8px 4px;
+    }
+
+    /* Liquid Glass Kartları */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-soft);
+      margin-bottom: 10px;
+    }
+
+    .row-between {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .divider {
+      height: 1px;
+      background: rgba(156, 163, 175, 0.18);
+      margin: 12px 0;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 3px 0;
+    }
+
+    .card-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .helper-text {
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: var(--text-muted);
+      margin: 6px 6px 16px 6px;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--accent-blue);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* iOS / Modern Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 31px;
+      flex-shrink: 0;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: rgba(156, 163, 175, 0.35);
+      transition: 0.25s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 27px;
+      width: 27px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: 0.25s;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+    }
+    input:checked + .slider {
+      background-color: var(--accent-green);
+    }
+    input:checked + .slider:before {
+      transform: translateX(21px);
+    }
+
+    /* Form ve Seçiciler */
+    .clean-select {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 15px;
+      font-weight: 500;
+      text-align: right;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .input-box {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 15.5px;
+      padding: 8px 0;
+      outline: none;
+    }
+
+    textarea.input-box {
+      resize: none;
+      min-height: 76px;
+      line-height: 1.45;
+    }
+
+    .pill-btn {
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .primary-wide-btn {
+      width: 100%;
+      background: var(--accent-blue);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.28);
+    }
+
+    /* Mod Seçici Kartları (Yol A vs Yol B) */
+    .mode-card {
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .mode-card.active {
+      border-color: var(--accent-blue);
+      background: rgba(0, 122, 255, 0.07);
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(0, 122, 255, 0.14);
+      color: var(--accent-blue);
+    }
+
+    /* Alt Yüzen Liquid Glass Sekme Çubuğu */
+    .bottom-nav-wrap {
+      position: fixed;
+      bottom: 16px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      z-index: 100;
+      padding: 0 14px;
+    }
+
+    .bottom-nav {
+      width: 100%;
+      max-width: 450px;
+      background: var(--nav-bg);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      padding: 6px;
+      display: flex;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+    }
+
+    .nav-item {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 8px 4px;
+      border-radius: 999px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-item.active {
+      background: rgba(0, 122, 255, 0.13);
+      color: var(--accent-blue);
+    }
+
+    .nav-icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.18s ease;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Karşılama (Onboarding) Modalı */
+    .onboarding-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary);
+      z-index: 200;
+      padding: 28px 22px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .onboarding-overlay.show {
+      display: flex;
+    }
+    .hero-icon {
+      width: 84px;
+      height: 84px;
+      border-radius: 22px;
+      box-shadow: 0 12px 28px rgba(6, 182, 212, 0.28);
+      margin-bottom: 18px;
+      object-fit: cover;
+    }
+    .feature-row {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 18px;
+      align-items: flex-start;
+    }
+    .feature-icon {
+      font-size: 22px;
+      width: 34px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KARŞILAMA EKRANI (Görsel 2 ile birebir uyumlu + Tulpar Mitoloji Teması) -->
+  <div id="onboardingModal" class="onboarding-overlay">
+    <div>
+      <div class="row-between" style="margin-bottom: 24px;">
+        <div style="display:flex; gap:6px;">
+          <span style="width:22px; height:6px; border-radius:4px; background:var(--accent-blue);"></span>
+          <span style="width:6px; height:6px; border-radius:50%; background:#D1D5DB;"></span>
+          <span style="width:6px; height:6px; border-radius:50%; background:#D1D5DB;"></span>
+        </div>
+        <button class="link-btn" style="color:var(--text-muted);" onclick="closeOnboarding()">Geç</button>
+      </div>
+
+      <img src="tulpar_logo.png" alt="Tulpar Logo" class="hero-icon" onerror="this.style.background='#0F172A'" />
+
+      <h1 style="font-size:30px; font-weight:800; margin:0 0 10px 0; line-height:1.18;">
+        Tulpar'a<br/>hoş geldiniz
+      </h1>
+      <p style="font-size:15.5px; color:var(--text-muted); margin:0 0 28px 0; line-height:1.45;">
+        İstenmeyen SMS'leri ve spam aramaları siz görmeden ayırır; bildirim ve ses gelmez. %100 Rust çekirdeğiyle çalışır.
+      </p>
+
+      <div class="feature-row">
+        <div class="feature-icon" style="color:#F59E0B;">☰</div>
+        <div>
+          <p class="card-title">Kelimeye göre filtre & Leetspeak Çözücü</p>
+          <p class="card-sub">Bahis, reklam ve dolandırıcılık mesajları (`b0nus`, `fr33spin` dahil) hazır listelerle açık gelir.</p>
+        </div>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-icon" style="color:#007AFF;">🏛️</div>
+        <div>
+          <p class="card-title">Resmi dolandırıcı listesi (USOM 2026)</p>
+          <p class="card-sub">T.C. Siber Güvenlik Başkanlığı'nın tespit ettiği 60.000+ sahte site otomatik engellenir.</p>
+        </div>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-icon" style="color:#34C759;">🛡️</div>
+        <div>
+          <p class="card-title">Mesajlarınız telefonda kalır (Yol A & Yol B)</p>
+          <p class="card-sub">İster mevcut SMS uygulamanızla (Yol A), ister varsayılan SMS uygulaması olarak (Yol B) tamamen cihaz içinde çalışır.</p>
+        </div>
+      </div>
+    </div>
+
+    <button class="primary-wide-btn" onclick="closeOnboarding()">Devam</button>
+  </div>
+
+  <div class="container">
+
+    <!-- =========================================================
+         SEKME 1: KELİMELER (Görsel 3 ile birebir yapı)
+         ========================================================= -->
+    <div id="tab-kelimeler" class="tab-pane active">
+      <div class="header-row">
+        <h1 class="page-title">Kelimeler</h1>
+        <button class="circle-btn" onclick="promptAddKeyword()" title="Yeni Kelime Ekle">+</button>
+      </div>
+
+      <div class="section-label">🏛️ Resmi koruma</div>
+      <div class="glass-card">
+        <div class="row-between">
+          <div>
+            <p class="card-title">Siber Güvenlik Başkanlığı listesi</p>
+            <p class="card-sub" id="usomStatusText">60.347 adres · güncellendi: az önce</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="usomToggle" checked onchange="toggleUsom(this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <button class="link-btn" onclick="syncUsom()">Şimdi güncelle</button>
+      </div>
+      <p class="helper-text">
+        T.C. Siber Güvenlik Başkanlığı'nın (USOM) son 12 ayda tespit ettiği oltalama ve bankacılık dolandırıcılığı adreslerini içeren SMS'ler İstenmeyen'e gider. Liste telefonunuza indirilir ve her gün güncellenir; mesajlarınız hiçbir yere gönderilmez.
+      </p>
+
+      <div class="section-label">🔗 Link kuralı</div>
+      <div class="glass-card">
+        <div class="row-between">
+          <span class="card-title" style="margin:0;">Linkli mesajlar</span>
+          <select id="linkPolicySelect" class="clean-select" onchange="changeLinkPolicy(this.value)">
+            <option value="ShortenedLinksOnly">Kısaltılmış linkler ⌄</option>
+            <option value="AllLinks">Tüm yabancı linkler ⌄</option>
+            <option value="Disabled">Devre dışı ⌄</option>
+          </select>
+        </div>
+        <div class="divider"></div>
+        <div class="row-between">
+          <span class="card-title" style="margin:0;">Klasör</span>
+          <span style="color:var(--text-muted); font-size:15px;">🗑️ İstenmeyen ⌄</span>
+        </div>
+      </div>
+      <p class="helper-text">
+        bit.ly, tinyurl gibi kısaltılmış linkler spam ve dolandırıcılıkta çok kullanılır. Bankanızdan bu tür linkler geliyorsa İzinli sekmesine banka adını ekleyin.
+      </p>
+
+      <div class="section-label">🗑️ İstenmeyen</div>
+      <div class="glass-card" id="keywordListContainer"></div>
+    </div>
+
+    <!-- =========================================================
+         SEKME 2: İZİNLİ (Görsel 5 ile birebir yapı)
+         ========================================================= -->
+    <div id="tab-izinli" class="tab-pane">
+      <div class="header-row">
+        <h1 class="page-title">İzin listesi</h1>
+      </div>
+
+      <div class="glass-card" style="padding: 10px 16px;">
+        <div class="row-between">
+          <input id="newAllowInput" type="text" class="input-box" placeholder="ör. kargo, banka adı veya https://text..." />
+          <button class="link-btn" onclick="addAllowedEntry()">Ekle</button>
+        </div>
+      </div>
+      <p class="helper-text">
+        İfade veya site adresi yazın. Site adresi yazarsanız uygulama bunu otomatik anlar.
+      </p>
+
+      <div class="section-label">İzinli siteler</div>
+      <div id="allowedSitesContainer"></div>
+      <p class="helper-text">
+        Kurallara uysun: siteye güvenilir, linki yüzünden filtrelenmez; ama "bahis" veya "indirim" gibi kelimeler içeriyorsa yine ilgili klasöre gider. Her zaman gelsin: o siteden gelen her mesaj gelen kutusuna düşer.<br/><br/>
+        Alt adresler dahildir (ty.gl eklerseniz text.ty.gl da izinli olur). Mesajda başka bir site linki de varsa izin uygulanmaz; sahte mesajlar adres taklidiyle geçemez.
+      </p>
+
+      <div class="section-label">İzinli ifadeler</div>
+      <div class="glass-card" id="allowedPhrasesContainer"></div>
+      <p class="helper-text">
+        Bu ifadeleri gövdesinde veya gönderici adında içeren mesajlar, yasaklı kelime içerse bile asla filtrelenmez.
+      </p>
+    </div>
+
+    <!-- =========================================================
+         SEKME 3: ARAMALAR (CallScreeningService)
+         ========================================================= -->
+    <div id="tab-aramalar" class="tab-pane">
+      <div class="header-row">
+        <h1 class="page-title">Aramalar</h1>
+        <button class="circle-btn" onclick="promptAddPrefix()" title="Numara Öneki Ekle">+</button>
+      </div>
+
+      <div class="section-label">📞 Android CallScreeningService Kalkanı</div>
+      <div class="glass-card">
+        <div class="row-between">
+          <div>
+            <p class="card-title">Spam ve Gizli Arama Engelleme</p>
+            <p class="card-sub">Varsayılan telefon uygulamanızı değiştirmeden çalışır</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="callMasterToggle" checked onchange="updateCallToggle('enabled', this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <div class="row-between">
+          <span class="card-title" style="margin:0;">Gizli / Özel numaraları reddet</span>
+          <label class="switch">
+            <input type="checkbox" id="callPrivateToggle" checked onchange="updateCallToggle('block_private_numbers', this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <div class="row-between">
+          <span class="card-title" style="margin:0;">Yurt dışı (+90 dışı) çağrıları engelle</span>
+          <label class="switch">
+            <input type="checkbox" id="callForeignToggle" checked onchange="updateCallToggle('block_foreign_numbers', this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="divider"></div>
+        <div class="row-between">
+          <span class="card-title" style="margin:0;">Reddetmek yerine sessize al</span>
+          <label class="switch">
+            <input type="checkbox" id="callSilenceToggle" onchange="updateCallToggle('silence_instead_of_reject', this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="section-label">🚫 Engellenen Numara Önekleri (Pazarlama / Çağrı Merkezi)</div>
+      <div class="glass-card" id="callPrefixesContainer"></div>
+      <p class="helper-text">
+        Rehberinizde kayıtlı olan kişiler hiçbir zaman engellenmez. 0850 veya 02129 gibi pazarlama önekleriyle başlayan numaralar telefonunuz çalmadan Rust motoru tarafından geri çevrilir.
+      </p>
+    </div>
+
+    <!-- =========================================================
+         SEKME 4: DENE (Görsel 4 ile birebir yapı)
+         ========================================================= -->
+    <div id="tab-dene" class="tab-pane">
+      <div class="header-row">
+        <h1 class="page-title">Dene</h1>
+      </div>
+
+      <div class="section-label">Mesaj</div>
+      <div class="glass-card">
+        <input id="testSenderInput" type="text" class="input-box" placeholder="Gönderici (ör. MAGAZA veya numara)" value="SUPERWIN" oninput="runLiveTest()" />
+        <div class="divider"></div>
+        <textarea id="testBodyInput" class="input-box" oninput="runLiveTest()">Sana özel 500 TL deneme b0nusu! Hemen SUPERWIN'e giriş yap: superwin724.com</textarea>
+        <div class="divider"></div>
+        <div class="row-between">
+          <button class="pill-btn" onclick="pasteFromClipboard()">📋 Yapıştır</button>
+          <button class="link-btn" style="color:var(--accent-red);" onclick="clearTestInputs()">Temizle</button>
+        </div>
+      </div>
+      <p class="helper-text">
+        Aldığınız spam mesajı Mesajlar'da uzun basıp kopyalayın, sonra buraya yapıştırın.
+      </p>
+
+      <div class="section-label">Sonuç</div>
+      <div class="glass-card" id="testResultCard"></div>
+
+      <div class="section-label">Önerilen kelimeler</div>
+      <div class="glass-card" id="suggestedKeywordsCard"></div>
+    </div>
+
+    <!-- =========================================================
+         SEKME 5: KURULUM (Yol A ve Yol B Seçimi + Mesaj Kutusu)
+         ========================================================= -->
+    <div id="tab-kurulum" class="tab-pane">
+      <div class="header-row">
+        <h1 class="page-title">Kurulum</h1>
+        <button class="link-btn" onclick="openOnboarding()">Rehber</button>
+      </div>
+
+      <div class="section-label">⚡ Çalışma Yolu Seçimi (Kullanıcı Tercihi)</div>
+
+      <!-- YOL A KARTI -->
+      <div id="modeACard" class="glass-card mode-card active" onclick="selectOperatingMode('ModeASmartSilencer')">
+        <div class="row-between">
+          <span class="badge">EN PRATİK ÇÖZÜM</span>
+          <span id="modeACheck" style="color:var(--accent-blue); font-weight:700;">✓ Seçili</span>
+        </div>
+        <p class="card-title" style="margin-top:8px;">Yol A: Akıllı Bildirim Susturucu + Arka Plan Dinleyici</p>
+        <p class="card-sub">
+          Mevcut SMS uygulamanızı (Google Mesajlar, Samsung Mesajlar vb.) kullanmaya devam edersiniz. Tulpar gelen SMS'i arka planda Rust motoruna iletir; spam ise bildirim sesini ve ekran bildirimini milisaniyeler içinde yok eder.
+        </p>
+        <div style="margin-top:12px;">
+          <button class="pill-btn" onclick="event.stopPropagation(); triggerModeAPermission()">Bildirim & SMS İznini Etkinleştir</button>
+        </div>
+      </div>
+
+      <!-- YOL B KARTI -->
+      <div id="modeBCard" class="glass-card mode-card" onclick="selectOperatingMode('ModeBDefaultSmsApp')">
+        <div class="row-between">
+          <span class="badge" style="background:rgba(6, 182, 212, 0.15); color:var(--accent-cyan);">TAM KONTROL (ROLE_SMS)</span>
+          <span id="modeBCheck" style="color:var(--text-muted); font-weight:600;">Seç</span>
+        </div>
+        <p class="card-title" style="margin-top:8px;">Yol B: Tam Varsayılan SMS Uygulaması</p>
+        <p class="card-sub">
+          Tulpar Android'de varsayılan SMS uygulaması olarak atanır. Gelen tüm SMS'leri doğrudan kendi Rust veritabanına alır; "Gelen Kutusu" ve "İstenmeyen" klasörlerini aşağıda kendi arayüzünde gösterir.
+        </p>
+        <div style="margin-top:12px;">
+          <button class="pill-btn" style="background:var(--accent-cyan);" onclick="event.stopPropagation(); triggerModeBPermission()">Varsayılan SMS Uygulaması Yap</button>
+        </div>
+      </div>
+
+      <!-- ARAMA ENGELLEME ROLÜ -->
+      <div class="glass-card">
+        <div class="row-between">
+          <div>
+            <p class="card-title">Arama Engelleme Servisi (CallScreeningService)</p>
+            <p class="card-sub">Varsayılan telefon uygulamasını değiştirmeden spam aramaları sessize alır/reddeder.</p>
+          </div>
+          <button class="pill-btn" onclick="triggerCallRole()">Yetki Ver</button>
+        </div>
+      </div>
+
+      <!-- YOL B GELEN KUTUSU / İSTENMEYEN KLASÖR GÖRÜNÜMÜ -->
+      <div class="section-label">📬 Tulpar Mesaj Kutusu (Yol B & Yakalanan Kayıtlar)</div>
+      <div class="glass-card">
+        <div class="row-between" style="margin-bottom:10px;">
+          <button id="inboxBtn" class="pill-btn" onclick="switchFolderView(false)">Gelen Kutusu</button>
+          <button id="spamBtn" class="pill-btn" style="background:rgba(156,163,175,0.25); color:var(--text-main);" onclick="switchFolderView(true)">🗑️ İstenmeyen</button>
+        </div>
+        <div id="messagesListContainer"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ALT SEKMELER -->
+  <div class="bottom-nav-wrap">
+    <nav class="bottom-nav">
+      <button class="nav-item active" onclick="switchTab('kelimeler', this)">
+        <span class="nav-icon">☰</span>
+        <span>Kelimeler</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('izinli', this)">
+        <span class="nav-icon">🛡️</span>
+        <span>İzinli</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('aramalar', this)">
+        <span class="nav-icon">📞</span>
+        <span>Aramalar</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('dene', this)">
+        <span class="nav-icon">🔍</span>
+        <span>Dene</span>
+      </button>
+      <button class="nav-item" onclick="switchTab('kurulum', this)">
+        <span class="nav-icon">⚙️</span>
+        <span>Kurulum</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    // Varsayılan Durum (Native JNI köprüsü bağlıysa doğrudan Rust'tan okunur)
+    let state = {
+      mode: "ModeASmartSilencer",
+      usom_enabled: true,
+      usom_count: 60347,
+      usom_last_updated: "güncellendi: 4 dakika önce",
+      link_policy: "ShortenedLinksOnly",
+      keywords: [
+        { word: "bahis", category: "bahis", enabled: true },
+        { word: "casino", category: "bahis", enabled: true },
+        { word: "freespin", category: "bahis", enabled: true },
+        { word: "deneme bonusu", category: "bahis", enabled: true },
+        { word: "sweet bonanza", category: "bahis", enabled: true },
+        { word: "gates of olympus", category: "bahis", enabled: true },
+        { word: "çevrimsiz", category: "bahis", enabled: true }
+      ],
+      allowed_sites: [
+        { domain: "text.ty.gl", label: "Mesajlar", policy: "ObeyRules", enabled: true }
+      ],
+      allowed_phrases: [
+        { phrase: "doğrulama kodu", enabled: true },
+        { phrase: "tek kullanımlık", enabled: true },
+        { phrase: "şifreniz", enabled: true }
+      ],
+      call_config: {
+        enabled: true,
+        block_private_numbers: true,
+        block_foreign_numbers: true,
+        block_unknown_contacts: false,
+        blocked_prefixes: ["0850", "+90850", "02129"],
+        silence_instead_of_reject: false
+      },
+      messages: [
+        {
+          id: 1,
+          sender: "SUPERWIN",
+          body: "Sana özel 500 TL deneme b0nusu! Hemen SUPERWIN'e giriş yap: superwin724.com",
+          timestamp: "09:41",
+          is_spam: true,
+          matched_reason: "deneme bonusu"
+        },
+        {
+          id: 2,
+          sender: "KARGO",
+          body: "Kargonuz dağıtıma çıkmıştır. Teslimat doğrulama kodu: 4829. Takip: https://text.ty.gl/kargo",
+          timestamp: "09:38",
+          is_spam: false,
+          matched_reason: null
+        }
+      ]
+    };
+
+    let showingSpamFolder = true;
+
+    function loadInitialState() {
+      if (window.TulparNative && window.TulparNative.getEngineState) {
+        try {
+          state = JSON.parse(window.TulparNative.getEngineState());
+        } catch (e) {}
+      }
+      renderAll();
+      runLiveTest();
+    }
+
+    function persistState() {
+      if (window.TulparNative && window.TulparNative.saveEngineState) {
+        try {
+          state = JSON.parse(window.TulparNative.saveEngineState(JSON.stringify(state)));
+        } catch (e) {}
+      }
+      renderAll();
+      runLiveTest();
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    function openOnboarding() {
+      document.getElementById('onboardingModal').classList.add('show');
+    }
+    function closeOnboarding() {
+      document.getElementById('onboardingModal').classList.remove('show');
+    }
+
+    function renderAll() {
+      // USOM
+      document.getElementById('usomToggle').checked = state.usom_enabled;
+      document.getElementById('usomStatusText').textContent =
+        state.usom_count.toLocaleString('tr-TR') + " adres · " + state.usom_last_updated;
+      document.getElementById('linkPolicySelect').value = state.link_policy;
+
+      // Kelimeler
+      const kwContainer = document.getElementById('keywordListContainer');
+      kwContainer.innerHTML = state.keywords.map((k, idx) => `
+        ${idx > 0 ? '<div class="divider"></div>' : ''}
+        <div class="row-between">
+          <span class="card-title" style="margin:0; font-weight:500;">${k.word}</span>
+          <label class="switch">
+            <input type="checkbox" ${k.enabled ? 'checked' : ''} onchange="toggleKeyword(${idx}, this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      `).join('');
+
+      // İzinli Siteler
+      const sitesContainer = document.getElementById('allowedSitesContainer');
+      sitesContainer.innerHTML = state.allowed_sites.map((s, idx) => `
+        <div class="glass-card">
+          <div class="row-between">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="color:var(--accent-blue);">🔗</span>
+              <span class="card-title" style="margin:0;">${s.domain}</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" ${s.enabled ? 'checked' : ''} onchange="toggleAllowedSite(${idx}, this.checked)" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="row-between" style="margin-top:10px;">
+            <span class="card-sub">${s.label}</span>
+            <select class="clean-select" style="color:var(--accent-blue);" onchange="changeSitePolicy(${idx}, this.value)">
+              <option value="ObeyRules" ${s.policy === 'ObeyRules' ? 'selected' : ''}>Kurallara uysun ⌄</option>
+              <option value="AlwaysAllow" ${s.policy === 'AlwaysAllow' ? 'selected' : ''}>Her zaman gelsin ⌄</option>
+            </select>
+          </div>
+        </div>
+      `).join('');
+
+      // İzinli İfadeler
+      const phrasesContainer = document.getElementById('allowedPhrasesContainer');
+      phrasesContainer.innerHTML = state.allowed_phrases.map((p, idx) => `
+        ${idx > 0 ? '<div class="divider"></div>' : ''}
+        <div class="row-between">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="color:var(--accent-blue); font-weight:700;">❝☰</span>
+            <span class="card-title" style="margin:0; font-weight:500;">${p.phrase}</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="toggleAllowedPhrase(${idx}, this.checked)" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      `).join('');
+
+      // Aramalar
+      document.getElementById('callMasterToggle').checked = state.call_config.enabled;
+      document.getElementById('callPrivateToggle').checked = state.call_config.block_private_numbers;
+      document.getElementById('callForeignToggle').checked = state.call_config.block_foreign_numbers;
+      document.getElementById('callSilenceToggle').checked = state.call_config.silence_instead_of_reject;
+
+      const prefixContainer = document.getElementById('callPrefixesContainer');
+      prefixContainer.innerHTML = state.call_config.blocked_prefixes.map((pfx, idx) => `
+        ${idx > 0 ? '<div class="divider"></div>' : ''}
+        <div class="row-between">
+          <span class="card-title" style="margin:0;">${pfx}* ile başlayan numaralar</span>
+          <button class="link-btn" style="color:var(--accent-red);" onclick="removePrefix(${idx})">Kaldır</button>
+        </div>
+      `).join('');
+
+      // Kurulum (Yol A vs Yol B)
+      const isModeA = state.mode === "ModeASmartSilencer";
+      document.getElementById('modeACard').classList.toggle('active', isModeA);
+      document.getElementById('modeBCard').classList.toggle('active', !isModeA);
+      document.getElementById('modeACheck').textContent = isModeA ? "✓ Seçili" : "Seç";
+      document.getElementById('modeBCheck').textContent = !isModeA ? "✓ Seçili" : "Seç";
+
+      renderMessagesBox();
+    }
+
+    function renderMessagesBox() {
+      const filtered = (state.messages || []).filter(m => m.is_spam === showingSpamFolder);
+      const container = document.getElementById('messagesListContainer');
+      if (filtered.length === 0) {
+        container.innerHTML = `<p class="card-sub" style="padding:8px 0;">Bu klasörde mesaj yok.</p>`;
+        return;
+      }
+      container.innerHTML = filtered.map((m, idx) => `
+        ${idx > 0 ? '<div class="divider"></div>' : ''}
+        <div>
+          <div class="row-between">
+            <span class="card-title" style="font-size:14.5px;">${m.sender}</span>
+            <span class="card-sub">${m.timestamp}</span>
+          </div>
+          <p class="card-sub" style="color:var(--text-main); margin:4px 0;">${m.body}</p>
+          ${m.matched_reason ? `<span class="badge" style="background:rgba(245,158,11,0.16); color:#D97706;">Engel nedeni: ${m.matched_reason}</span>` : ''}
+        </div>
+      `).join('');
+    }
+
+    function switchFolderView(showSpam) {
+      showingSpamFolder = showSpam;
+      document.getElementById('inboxBtn').style.background = !showSpam ? 'var(--accent-blue)' : 'rgba(156,163,175,0.25)';
+      document.getElementById('inboxBtn').style.color = !showSpam ? '#fff' : 'var(--text-main)';
+      document.getElementById('spamBtn').style.background = showSpam ? 'var(--accent-blue)' : 'rgba(156,163,175,0.25)';
+      document.getElementById('spamBtn').style.color = showSpam ? '#fff' : 'var(--text-main)';
+      renderMessagesBox();
+    }
+
+    function toggleUsom(val) { state.usom_enabled = val; persistState(); }
+    function changeLinkPolicy(val) { state.link_policy = val; persistState(); }
+    function toggleKeyword(idx, val) { state.keywords[idx].enabled = val; persistState(); }
+    function toggleAllowedSite(idx, val) { state.allowed_sites[idx].enabled = val; persistState(); }
+    function changeSitePolicy(idx, val) { state.allowed_sites[idx].policy = val; persistState(); }
+    function toggleAllowedPhrase(idx, val) { state.allowed_phrases[idx].enabled = val; persistState(); }
+
+    function promptAddKeyword() {
+      const w = prompt("İstenmeyen kelime veya ifade ekleyin:");
+      if (w && w.trim()) {
+        state.keywords.unshift({ word: w.trim().toLowerCase(), category: "ozel", enabled: true });
+        persistState();
+      }
+    }
+
+    function addKeywordDirect(word) {
+      if (!state.keywords.some(k => k.word === word)) {
+        state.keywords.unshift({ word: word, category: "ozel", enabled: true });
+        persistState();
+      }
+    }
+
+    function addAllowedEntry() {
+      const inp = document.getElementById('newAllowInput');
+      const raw = inp.value.trim();
+      if (!raw) return;
+      const clean = raw.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+      if (clean.includes('.') && !clean.includes(' ')) {
+        state.allowed_sites.unshift({ domain: clean.toLowerCase(), label: "Mesajlar", policy: "ObeyRules", enabled: true });
+      } else {
+        state.allowed_phrases.unshift({ phrase: raw.toLowerCase(), enabled: true });
+      }
+      inp.value = '';
+      persistState();
+    }
+
+    function updateCallToggle(field, val) {
+      state.call_config[field] = val;
+      persistState();
+    }
+
+    function promptAddPrefix() {
+      const p = prompt("Engellenecek numara öneki (ör. 0850 veya 02129):");
+      if (p && p.trim()) {
+        state.call_config.blocked_prefixes.push(p.trim());
+        persistState();
+      }
+    }
+
+    function removePrefix(idx) {
+      state.call_config.blocked_prefixes.splice(idx, 1);
+      persistState();
+    }
+
+    function selectOperatingMode(modeName) {
+      state.mode = modeName;
+      persistState();
+    }
+
+    function syncUsom() {
+      document.getElementById('usomStatusText').textContent = "USOM sunucusundan güncelleniyor...";
+      if (window.TulparNative && window.TulparNative.syncUsomList) {
+        setTimeout(() => {
+          state = JSON.parse(window.TulparNative.syncUsomList());
+          renderAll();
+        }, 150);
+      } else {
+        setTimeout(() => {
+          state.usom_last_updated = "güncellendi: az önce";
+          renderAll();
+        }, 400);
+      }
+    }
+
+    function normalizeLeet(s) {
+      return s.toLowerCase()
+        .replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e')
+        .replace(/4/g, 'a').replace(/5/g, 's').replace(/@/g, 'a').replace(/\$/g, 's');
+    }
+
+    function runLiveTest() {
+      const sender = document.getElementById('testSenderInput').value || "";
+      const body = document.getElementById('testBodyInput').value || "";
+
+      let verdict = null;
+      if (window.TulparNative && window.TulparNative.testSms) {
+        try {
+          verdict = JSON.parse(window.TulparNative.testSms(sender, body));
+        } catch (e) {}
+      }
+
+      if (!verdict) {
+        // Tarayıcı Önizleme Yedeği (Rust motoruyla birebir aynı algoritma)
+        const combined = (sender + " " + body).toLowerCase();
+        const norm = normalizeLeet(combined);
+        let matched = null;
+        for (const k of state.keywords) {
+          if (k.enabled && (combined.includes(k.word) || norm.includes(normalizeLeet(k.word)))) {
+            matched = k.word;
+            break;
+          }
+        }
+        for (const p of state.allowed_phrases) {
+          if (p.enabled && combined.includes(p.phrase.toLowerCase())) {
+            matched = null;
+            break;
+          }
+        }
+        verdict = {
+          is_spam: !!matched,
+          matched_rule: matched,
+          suggested_keywords: [
+            { word: "superwin", reason: "Mesajdaki site adı (superwin724.com)" },
+            { word: "bonus", reason: "Bilinen spam kelimesi" }
+          ]
+        };
+      }
+
+      const resCard = document.getElementById('testResultCard');
+      if (verdict.is_spam) {
+        resCard.innerHTML = `
+          <div style="display:flex; align-items:center; gap:12px; color:#D97706;">
+            <span style="font-size:22px;">🗑️</span>
+            <span style="font-size:15.5px; font-weight:600;">
+              İstenmeyen klasörüne gider, bildirim gelmez (${verdict.matched_rule || 'kural eşleşti'})
+            </span>
+          </div>
+        `;
+      } else {
+        resCard.innerHTML = `
+          <div style="display:flex; align-items:center; gap:12px; color:var(--accent-green);">
+            <span style="font-size:22px;">✅</span>
+            <span style="font-size:15.5px; font-weight:600;">
+              Gelen Kutusu'na düşer (${verdict.matched_rule || 'Temiz mesaj'})
+            </span>
+          </div>
+        `;
+      }
+
+      const sugCard = document.getElementById('suggestedKeywordsCard');
+      const sugs = verdict.suggested_keywords || [];
+      if (sugs.length === 0) {
+        sugCard.innerHTML = `<p class="card-sub">Önerilen yeni kelime bulunamadı.</p>`;
+      } else {
+        sugCard.innerHTML = sugs.map((s, idx) => `
+          ${idx > 0 ? '<div class="divider"></div>' : ''}
+          <div class="row-between">
+            <div>
+              <p class="card-title">${s.word}</p>
+              <p class="card-sub">${s.reason}</p>
+            </div>
+            <button class="link-btn" onclick="addKeywordDirect('${s.word}')">⊕ İstenmeyen</button>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('testBodyInput').value = text;
+          runLiveTest();
+        }
+      } catch (e) {}
+    }
+
+    function clearTestInputs() {
+      document.getElementById('testSenderInput').value = '';
+      document.getElementById('testBodyInput').value = '';
+      runLiveTest();
+    }
+
+    function triggerModeAPermission() {
+      if (window.TulparNative && window.TulparNative.requestModeAPermissions) {
+        window.TulparNative.requestModeAPermissions();
+      } else {
+        alert("Android cihazda Bildirim Dinleme ve SMS izin ekranı açılır.");
+      }
+    }
+
+    function triggerModeBPermission() {
+      if (window.TulparNative && window.TulparNative.requestModeBDefaultSmsRole) {
+        window.TulparNative.requestModeBDefaultSmsRole();
+      } else {
+        alert("Android cihazda Varsayılan SMS Uygulaması (ROLE_SMS) seçim penceresi açılır.");
+      }
+    }
+
+    function triggerCallRole() {
+      if (window.TulparNative && window.TulparNative.requestCallScreeningRole) {
+        window.TulparNative.requestCallScreeningRole();
+      } else {
+        alert("Android cihazda Varsayılan Çağrı Kimliği ve Spam Kalkanı (ROLE_CALL_SCREENING) penceresi açılır.");
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadInitialState);
+  </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+name: Tulpar Full-Rust Android APK Build & Sign
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-sign-apk:
+    name: Rust NDK + Gradle APK + V2/V3 Signature
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Depoyu Klonla (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Java 17 Kurulumu (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Android SDK ve NDK Kurulumu
+        uses: android-actions/setup-android@v3
+
+      - name: NDK r26d ve Build-Tools 35.0.0 Yükle
+        run: |
+          sdkmanager --install "ndk;26.3.11579264" "platforms;android-35" "build-tools;35.0.0"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+
+      - name: Rust Toolchain ve Android Hedeflerini (Targets) Kur
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      - name: cargo-ndk Kurulumu
+        run: cargo install cargo-ndk --locked
+
+      - name: Rust Çekirdek Birim Testlerini Çalıştır
+        working-directory: rust-core
+        run: cargo test
+
+      - name: Rust Motorunu (.so) Tüm Android Mimarileri İçin Derle
+        working-directory: rust-core
+        run: |
+          cargo ndk \
+            -t arm64-v8a \
+            -t armeabi-v7a \
+            -t x86_64 \
+            -o ../android/app/src/main/jniLibs \
+            build --release
+
+      - name: İmzalanmamış Release APK'yı Derle (Gradle)
+        working-directory: android
+        run: |
+          gradle assembleRelease --no-daemon
+
+      - name: Keystore Oluştur (Secret Yoksa Otomatik Üret) ve V2/V3 Şemasıyla İmzala
+        working-directory: android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.SIGNING_KEYSTORE_PASS || 'tulpar123456' }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS || 'tulpar_key' }}
+          KEY_PASS: ${{ secrets.SIGNING_KEY_PASS || 'tulpar123456' }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > tulpar-release.jks
+          else
+            keytool -genkeypair -v \
+              -keystore tulpar-release.jks \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -alias "$KEY_ALIAS" \
+              -storepass "$KEYSTORE_PASS" \
+              -keypass "$KEY_PASS" \
+              -dname "CN=Tulpar Security, OU=Mobile, O=Tulpar, L=Istanbul, S=TR, C=TR"
+          fi
+
+          UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED_APK="app/build/outputs/apk/release/tulpar-aligned.apk"
+          SIGNED_APK="app/build/outputs/apk/release/Tulpar-v1.0.0-signed.apk"
+
+          $ANDROID_HOME/build-tools/35.0.0/zipalign -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+
+          # Android 14/15+ (SDK 35+) uyumluluğu için V1 + V2 + V3 imza şemaları zorunlu olarak açık
+          $ANDROID_HOME/build-tools/35.0.0/apksigner sign \
+            --ks tulpar-release.jks \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass pass:"$KEYSTORE_PASS" \
+            --key-pass pass:"$KEY_PASS" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "$SIGNED_APK" \
+            "$ALIGNED_APK"
+
+          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose "$SIGNED_APK"
+
+      - name: İmzalı APK'yı GitHub Actions Artifact Olarak Yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tulpar-Signed-APK
+          path: android/app/build/outputs/apk/release/Tulpar-v1.0.0-signed.apk
+
+      - name: GitHub Releases Üzerinde Yayınla (Obtainium Uyumlu)
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name == 'main' && 'v1.0.0' || github.ref_name }}
+          name: "Tulpar Kalkan ${{ github.ref_name }} (Full Rust Android SMS & Çağrı Engelleyici)"
+          body: |
+            ## 🐎 Tulpar — Türk Mitolojisi Temalı Full Rust SMS & Çağrı Kalkanı
+            - **Yol A (Akıllı Bildirim Susturucu):** Mevcut SMS uygulamanızı bozmadan arka planda spam bildirimlerini milisaniyeler içinde yok eder.
+            - **Yol B (Tam Varsayılan SMS Uygulaması - ROLE_SMS):** Gelen Kutusu ve İstenmeyen klasörlerini kendi içinde yönetir.
+            - **Aramalar (CallScreeningService):** Varsayılan telefon uygulamasını değiştirmeden spam ve gizli numaraları engeller.
+            - **T.C. Siber Güvenlik Başkanlığı (USOM) 2026 Entegrasyonu:** 60.000+ aktif oltalama ve yasa dışı bahis alan adını cihaz içinde filtreler.
+          files: android/app/build/outputs/apk/release/Tulpar-v1.0.0-signed.apk
