@@ -176,7 +176,7 @@ impl Default for TulparConfig {
                     body: "Sana özel 500 TL deneme b0nusu! Hemen SUPERWIN'e giriş yap: superwin724.com".into(),
                     timestamp: "09:41".into(),
                     is_spam: true,
-                    matched_reason: Some("Leetspeak & Kelime Kuralı: deneme bonusu + superwin724.com".into()),
+                    matched_reason: Some("Engelli kelime: deneme bonusu".into()),
                 },
                 StoredSmsMessage {
                     id: 2,
@@ -321,7 +321,7 @@ pub fn evaluate_sms(sender: &str, body: &str) -> SmsVerdict {
                     is_spam: false,
                     action: "ALLOW".into(),
                     folder: "Gelen Kutusu".into(),
-                    matched_rule: Some(format!("İzinli İfade Koruması: '{}'", phrase.phrase)),
+                    matched_rule: Some(format!("Doğrulama kodu koruması ({})", phrase.phrase)),
                     extracted_domains: domains,
                     suggested_keywords: vec![],
                 };
@@ -355,7 +355,7 @@ pub fn evaluate_sms(sender: &str, body: &str) -> SmsVerdict {
             is_spam: false,
             action: "ALLOW".into(),
             folder: "Gelen Kutusu".into(),
-            matched_rule: Some("İzinli Site (Her Zaman Gelsin)".into()),
+            matched_rule: Some("Güvenilir site izni".into()),
             extracted_domains: domains,
             suggested_keywords: vec![],
         };
@@ -399,7 +399,7 @@ pub fn evaluate_sms(sender: &str, body: &str) -> SmsVerdict {
                     is_spam: true,
                     action: action_for_mode.into(),
                     folder: "İstenmeyen".into(),
-                    matched_rule: Some(format!("USOM Resmi Siber Güvenlik Listesi ({})", d_clean)),
+                    matched_rule: Some(format!("USOM zararlı adres listesi ({})", d_clean)),
                     extracted_domains: domains,
                     suggested_keywords: suggestions,
                 };
@@ -417,7 +417,7 @@ pub fn evaluate_sms(sender: &str, body: &str) -> SmsVerdict {
                             is_spam: true,
                             action: action_for_mode.into(),
                             folder: "İstenmeyen".into(),
-                            matched_rule: Some(format!("Kısaltılmış Link Kuralı ({})", d)),
+                            matched_rule: Some(format!("Kısaltılmış bağlantı ({})", d)),
                             extracted_domains: domains,
                             suggested_keywords: suggestions,
                         };
@@ -429,7 +429,7 @@ pub fn evaluate_sms(sender: &str, body: &str) -> SmsVerdict {
                     is_spam: true,
                     action: action_for_mode.into(),
                     folder: "İstenmeyen".into(),
-                    matched_rule: Some(format!("Tanınmayan Link Kuralı ({})", domains[0])),
+                    matched_rule: Some(format!("Bilinmeyen bağlantı ({})", domains[0])),
                     extracted_domains: domains,
                     suggested_keywords: suggestions,
                 };
@@ -448,7 +448,7 @@ pub fn evaluate_sms(sender: &str, body: &str) -> SmsVerdict {
                     is_spam: true,
                     action: action_for_mode.into(),
                     folder: "İstenmeyen".into(),
-                    matched_rule: Some(format!("{}", kw.word)),
+                    matched_rule: Some(format!("Engelli kelime: {}", kw.word)),
                     extracted_domains: domains,
                     suggested_keywords: suggestions,
                 };
@@ -600,7 +600,7 @@ pub fn sync_usom_feed() -> Result<usize, String> {
     let mut state = STATE.write().unwrap();
     state.usom_domains.extend(fetched_domains);
     state.config.usom_count = state.usom_domains.len();
-    state.config.usom_last_updated = "güncellendi: az önce".to_string();
+    state.config.usom_last_updated = "Az önce güncellendi".to_string();
     save_state_locked(&state);
     Ok(count)
 }

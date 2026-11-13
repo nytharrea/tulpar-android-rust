@@ -1,4 +1,4 @@
-name: Tulpar Full-Rust Android APK Build & Sign
+name: Kalkan Android APK Build & Sign
 
 on:
   push:
@@ -121,11 +121,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name == 'main' && 'v1.0.0' || github.ref_name }}
-          name: "Tulpar Kalkan ${{ github.ref_name }} (Full Rust Android SMS & Çağrı Engelleyici)"
+          name: "Kalkan ${{ github.ref_name }} — Akıllı SMS ve Çağrı Engelleyici"
           body: |
-            ## 🐎 Tulpar — Türk Mitolojisi Temalı Full Rust SMS & Çağrı Kalkanı
-            - **Yol A (Akıllı Bildirim Susturucu):** Mevcut SMS uygulamanızı bozmadan arka planda spam bildirimlerini milisaniyeler içinde yok eder.
-            - **Yol B (Tam Varsayılan SMS Uygulaması - ROLE_SMS):** Gelen Kutusu ve İstenmeyen klasörlerini kendi içinde yönetir.
-            - **Aramalar (CallScreeningService):** Varsayılan telefon uygulamasını değiştirmeden spam ve gizli numaraları engeller.
-            - **T.C. Siber Güvenlik Başkanlığı (USOM) 2026 Entegrasyonu:** 60.000+ aktif oltalama ve yasa dışı bahis alan adını cihaz içinde filtreler.
+            ## 🛡️ Kalkan — Akıllı SMS ve Çağrı Engelleyici
+            - **Sessiz Bildirim Koruması:** Mevcut SMS uygulamanızı değiştirmeden spam bildirimlerini ve sesini otomatik gizler.
+            - **USOM Zararlı Adres Koruması:** 60.000+ sahte banka, kargo ve yasa dışı bahis adresini cihaz içinde engeller.
+            - **Çağrı Koruması:** Gizli numaraları, yurt dışı aramaları ve 0850'li pazarlama çağrılarını telefon çalmadan durdurur.
           files: android/app/build/outputs/apk/release/Tulpar-v1.0.0-signed.apk
