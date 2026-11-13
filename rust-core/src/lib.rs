@@ -246,7 +246,7 @@ static STATE: Lazy<RwLock<EngineState>> = Lazy::new(|| {
 });
 
 static URL_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"(?i)((?:https?://)?(?:www\.)?([a-z0-9-\.]+\.[a-z]{2,10})(?:/[^\s]*)?)").unwrap()
+    Regex::new(r"(?i)\b((?:https?://)?(?:www\.)?([a-z0-9-\.]+\.[a-z]{2,10})(?:/[^\s]*)?)\b").unwrap()
 });
 
 const SHORTENERS: &[&str] = &[

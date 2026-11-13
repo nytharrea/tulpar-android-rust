@@ -26,9 +26,12 @@ jobs:
 
       - name: Android SDK ve NDK Kurulumu
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       - name: NDK r26d ve Build-Tools 35.0.0 Yükle
         run: |
+          yes | sdkmanager --licenses || true
           sdkmanager --install "ndk;26.3.11579264" "platforms;android-35" "build-tools;35.0.0"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
 
@@ -53,6 +56,11 @@ jobs:
             -t x86_64 \
             -o ../android/app/src/main/jniLibs \
             build --release
+
+      - name: Gradle 8.9 Kurulumu
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
       - name: İmzalanmamış Release APK'yı Derle (Gradle)
         working-directory: android
