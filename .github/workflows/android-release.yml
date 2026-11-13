@@ -29,10 +29,13 @@ jobs:
         with:
           packages: 'platform-tools'
 
-      - name: NDK r28c (28.2.13676358) ve Build-Tools 36.0.0 Yükle
+      - name: NDK r28c (28.2.13676358), SDK 37 ve Build-Tools 37.0.0 Yükle
         run: |
           yes | sdkmanager --licenses || true
-          sdkmanager --install "ndk;28.2.13676358" "platforms;android-36" "build-tools;36.0.0"
+          sdkmanager --install "ndk;28.2.13676358" "platforms;android-37.0" "build-tools;37.0.0"
+          if [ -d "$ANDROID_HOME/platforms/android-37.0" ] && [ ! -e "$ANDROID_HOME/platforms/android-37" ]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
+          fi
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> $GITHUB_ENV
 
       - name: Rust Toolchain ve Android Hedeflerini (Targets) Kur
@@ -91,10 +94,10 @@ jobs:
           ALIGNED_APK="app/build/outputs/apk/release/tulpar-aligned.apk"
           SIGNED_APK="app/build/outputs/apk/release/Tulpar-v1.0.0-signed.apk"
 
-          $ANDROID_HOME/build-tools/36.0.0/zipalign -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+          $ANDROID_HOME/build-tools/37.0.0/zipalign -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
 
-          # Android 15/16+ (SDK 36+) uyumluluğu için V1 + V2 + V3 imza şemaları zorunlu olarak açık
-          $ANDROID_HOME/build-tools/36.0.0/apksigner sign \
+          # Android 15/16/17+ (SDK 36/37+) uyumluluğu için V1 + V2 + V3 imza şemaları zorunlu olarak açık
+          $ANDROID_HOME/build-tools/37.0.0/apksigner sign \
             --ks tulpar-release.jks \
             --ks-key-alias "$KEY_ALIAS" \
             --ks-pass pass:"$KEYSTORE_PASS" \
@@ -105,7 +108,7 @@ jobs:
             --out "$SIGNED_APK" \
             "$ALIGNED_APK"
 
-          $ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose "$SIGNED_APK"
+          $ANDROID_HOME/build-tools/37.0.0/apksigner verify --verbose "$SIGNED_APK"
 
       - name: İmzalı APK'yı GitHub Actions Artifact Olarak Yükle
         uses: actions/upload-artifact@v5

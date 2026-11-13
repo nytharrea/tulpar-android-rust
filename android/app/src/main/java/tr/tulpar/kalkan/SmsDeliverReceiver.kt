@@ -21,7 +21,7 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         if (messages.isNullOrEmpty()) return
 
-        val sender = messages[0].DisplayOriginatingAddress ?: messages[0].originatingAddress ?: "Bilinmeyen"
+        val sender = messages[0].displayOriginatingAddress ?: messages[0].originatingAddress ?: "Bilinmeyen"
         val fullBody = messages.joinToString(separator = "") { it.displayMessageBody ?: "" }
 
         // Rust motorunu başlat ve mesajı denetle
